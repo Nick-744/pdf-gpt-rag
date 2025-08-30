@@ -19,7 +19,11 @@ from __future__ import annotations
 import sys
 import json
 import logging
+import os
 from typing import List, Optional
+
+# Disable ChromaDB telemetry before any imports
+os.environ['ANONYMIZED_TELEMETRY'] = 'False'
 
 from PDF_GPT.config import RAGConfig
 from PDF_GPT.chatbot import PDFChatbot, configure_logging
@@ -49,8 +53,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Banner (skipped in quiet single-shot mode)
     if not (args.query and args.quiet):
         LOG.info('PDF RAG Chatbot — starting up')
-        LOG.info('Model: %s | Embeddings: %s | top_k=%d | temp=%.2f | max_new_tokens=%d',
-                 cfg.model_name, cfg.embed_model_name, cfg.top_k, cfg.temperature, cfg.max_new_tokens)
+        LOG.info('Model: %s | Embeddings: %s | Vector Store: %s | top_k=%d | temp=%.2f | max_new_tokens=%d',
+                 cfg.model_name, cfg.embed_model_name, cfg.vector_store_type, cfg.top_k, cfg.temperature, cfg.max_new_tokens)
         if cfg.persist_dir:
             LOG.info('Persistence directory: %s (reset=%s)', cfg.persist_dir, cfg.reset_index)
 
@@ -91,7 +95,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print('=' * 60)
         info = chatbot.get_document_info()
         if 'error' not in info:
-            print(f"Document loaded. Model: {info.get('model_name')} | Embeddings: {info.get('embed_model')}")
+            print(f"Document loaded. Model: {info.get('model_name')} | Embeddings: {info.get('embed_model')} | Vector Store: {info.get('vector_store')}")
             nn = info.get('num_nodes')
             if nn is not None:
                 print(f'Indexed nodes: {nn}')

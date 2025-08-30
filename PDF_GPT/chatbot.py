@@ -17,6 +17,8 @@ from .dependencies import (
     load_index_from_storage,
     HuggingFaceEmbedding,
     HuggingFaceLLM,
+    ChromaVectorStore,
+    chromadb,
     hf_login
 )
 
@@ -109,12 +111,93 @@ class PDFChatbot:
 
         return;
 
+    def _create_vector_store(self) -> Optional[Any]:
+        '''
+        Create and configure the vector store based on the configuration.
+        Returns the vector store instance or None for default (simple) storage.
+        '''
+        if self.config.vector_store_type == 'chroma':
+            try:
+                # Disable ChromaDB telemetry to prevent network errors
+                os.environ['ANONYMIZED_TELEMETRY'] = 'False'
+                
+                # Set up Chroma persistence directory
+                chroma_dir = os.path.join(self.config.persist_dir, 'chroma_db') if self.config.persist_dir else './chroma_db'
+                os.makedirs(chroma_dir, exist_ok=True)
+                
+                # Create Chroma client
+                chroma_client = chromadb.PersistentClient(path=chroma_dir)
+                
+                # Create or get collection
+                collection_name = self.config.chroma_collection_name
+                try:
+                    # Try to get existing collection
+                    chroma_collection = chroma_client.get_collection(name=collection_name)
+                    if self.config.reset_index:
+                        # Delete and recreate if reset is requested
+                        chroma_client.delete_collection(name=collection_name)
+                        chroma_collection = chroma_client.create_collection(name=collection_name)
+                        LOG.info('Reset Chroma collection: %s', collection_name)
+                    else:
+                        LOG.info('Using existing Chroma collection: %s', collection_name)
+                except Exception:
+                    # Collection doesn't exist, create it
+                    chroma_collection = chroma_client.create_collection(name=collection_name)
+                    LOG.info('Created new Chroma collection: %s', collection_name)
+                
+                # Create ChromaVectorStore
+                vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+                LOG.info('Chroma vector store initialized at: %s', chroma_dir)
+                return vector_store
+                
+            except Exception as e:
+                LOG.warning('Failed to initialize Chroma vector store: %s. Falling back to simple storage.', e)
+                return None
+        
+        elif self.config.vector_store_type == 'simple':
+            LOG.info('Using simple (in-memory) vector storage')
+            return None
+        
+        else:
+            LOG.warning('Unsupported vector store type: %s. Using simple storage.', self.config.vector_store_type)
+            return None
+
     def _load_or_build_index(self) -> VectorStoreIndex:
         '''
         If persist_dir exists and reset_index=False, load the index; otherwise build and persist (if requested).
+        Uses the configured vector store backend.
         '''
         persist_dir = self.config.persist_dir
+        vector_store = self._create_vector_store()
 
+        # For Chroma, we handle persistence through the vector store itself
+        if self.config.vector_store_type == 'chroma' and vector_store is not None:
+            if not self.config.reset_index:
+                try:
+                    # Try to create index from existing Chroma collection
+                    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+                    # Check if the collection has any data
+                    collection = getattr(vector_store, 'chroma_collection', None)
+                    if collection is not None and collection.count() > 0:
+                        index = VectorStoreIndex(nodes=[], storage_context=storage_context)
+                        LOG.info('Loaded existing Chroma index with %d vectors', collection.count())
+                        return index
+                    else:
+                        LOG.info('Chroma collection is empty, building new index...')
+                except Exception as e:
+                    LOG.warning('Failed to load from Chroma: %s. Building new index...', e)
+
+            # Build new index with Chroma
+            LOG.info('Building new index with Chroma vector store...')
+            documents = SimpleDirectoryReader(input_files = self.pdf_paths).load_data()
+            LOG.info('Loaded %d documents/chunks.', len(documents))
+            
+            storage_context = StorageContext.from_defaults(vector_store=vector_store)
+            index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+            LOG.info('Index built and persisted in Chroma')
+            return index
+
+        # Original logic for simple storage with file persistence
         if persist_dir and os.path.isdir(persist_dir) and not self.config.reset_index:
             try:
                 LOG.info('Loading index from: %s', persist_dir)
@@ -124,14 +207,18 @@ class PDFChatbot:
             except Exception as e:
                 LOG.warning('Failed to load index from %s: %s. Rebuilding…', persist_dir, e)
 
-        # Build new index
+        # Build new index with simple storage
         LOG.info('Building new index from PDFs...')
         documents = SimpleDirectoryReader(input_files = self.pdf_paths).load_data()
         LOG.info('Loaded %d documents/chunks.', len(documents))
 
-        index = VectorStoreIndex.from_documents(documents)
+        if vector_store is not None:
+            storage_context = StorageContext.from_defaults(vector_store=vector_store)
+            index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+        else:
+            index = VectorStoreIndex.from_documents(documents)
 
-        if persist_dir:
+        if persist_dir and self.config.vector_store_type == 'simple':
             try:
                 index.storage_context.persist(persist_dir = persist_dir)
                 LOG.info('Index persisted to: %s', persist_dir)
@@ -145,23 +232,65 @@ class PDFChatbot:
         Configure global LlamaIndex Settings for embeddings, LLM, and chunking.
         '''
         LOG.debug('Configuring LlamaIndex settings...')
-        Settings.embed_model = HuggingFaceEmbedding(model_name = self.config.embed_model_name)
-
-        # Note: HuggingFaceLLM auto-handles causal vs. seq2seq for many models.
-        Settings.llm = HuggingFaceLLM(
-            model_name      = self.config.model_name,
-            tokenizer_name  = self.config.model_name,
-            context_window  = 4096, # Adjust as needed per model
-            max_new_tokens  = self.config.max_new_tokens,
-            generate_kwargs = {
-                'temperature': self.config.temperature,
-                'do_sample':   True,
-            },
+        
+        # Determine device
+        device = self._get_device()
+        LOG.info('Using device: %s', device)
+        
+        # Configure embedding model with device
+        embed_kwargs = {}
+        if device and device != 'auto':
+            embed_kwargs['device'] = device
+            
+        Settings.embed_model = HuggingFaceEmbedding(
+            model_name = self.config.embed_model_name,
+            **embed_kwargs
         )
+
+        # Configure LLM with device
+        llm_kwargs = {
+            'model_name': self.config.model_name,
+            'tokenizer_name': self.config.model_name,
+            'context_window': 4096,  # Adjust as needed per model
+            'max_new_tokens': self.config.max_new_tokens,
+            'generate_kwargs': {
+                'temperature': self.config.temperature,
+                'do_sample': True,
+            },
+        }
+        
+        if device and device != 'auto':
+            llm_kwargs['device_map'] = device
+            
+        Settings.llm = HuggingFaceLLM(**llm_kwargs)
+        
         Settings.chunk_size    = self.config.chunk_size
         Settings.chunk_overlap = self.config.chunk_overlap
 
         return;
+
+    def _get_device(self) -> str:
+        '''Determine the best device to use for model execution.'''
+        import torch
+        
+        if self.config.device == 'auto':
+            if torch.cuda.is_available():
+                device = 'cuda'
+                LOG.info('CUDA detected: %d GPU(s) available', torch.cuda.device_count())
+                for i in range(torch.cuda.device_count()):
+                    gpu_name = torch.cuda.get_device_name(i)
+                    gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1024**3
+                    LOG.info('GPU %d: %s (%.1f GB)', i, gpu_name, gpu_memory)
+            else:
+                device = 'cpu'
+                LOG.info('CUDA not available, using CPU')
+        else:
+            device = self.config.device
+            if device.startswith('cuda') and not torch.cuda.is_available():
+                LOG.warning('CUDA device requested but not available, falling back to CPU')
+                device = 'cpu'
+                
+        return device;
 
     def _initialize(self) -> None:
         '''Initialize the chatbot by setting up all components.'''
@@ -229,23 +358,34 @@ class PDFChatbot:
         if not self.is_initialized or not self.index:
             return {'error': 'Index not loaded'};
         try:
-            # Safer doc count (avoids poking at private internals)
-            # Some versions expose: index.docstore.docs (dict-like)
+            # Get node count based on vector store type
             num_nodes = None
             try:
-                # Best-effort across versions:
-                ds = getattr(self.index, 'docstore', None)
-                if ds is not None:
-                    docs = getattr(ds, 'docs', None)
-                    if isinstance(docs, dict):
-                        num_nodes = sum(len(v.nodes) if hasattr(v, 'nodes') else 1 for v in docs.values())
-            except Exception:
+                if self.config.vector_store_type == 'chroma':
+                    # For Chroma, get count from collection
+                    storage_context = getattr(self.index, 'storage_context', None)
+                    if storage_context:
+                        vector_store = getattr(storage_context, 'vector_store', None)
+                        if vector_store:
+                            collection = getattr(vector_store, 'chroma_collection', None)
+                            if collection:
+                                num_nodes = collection.count()
+                else:
+                    # For simple storage, try to get from docstore
+                    ds = getattr(self.index, 'docstore', None)
+                    if ds is not None:
+                        docs = getattr(ds, 'docs', None)
+                        if isinstance(docs, dict):
+                            num_nodes = len(docs)
+            except Exception as e:
+                LOG.debug('Could not determine node count: %s', e)
                 num_nodes = None
 
             return {
                 'num_nodes':     num_nodes,
                 'model_name':    self.config.model_name,
                 'embed_model':   self.config.embed_model_name,
+                'vector_store':  self.config.vector_store_type,
                 'top_k':         self.config.top_k,
                 'chunk_size':    self.config.chunk_size,
                 'chunk_overlap': self.config.chunk_overlap,
@@ -257,6 +397,8 @@ class PDFChatbot:
             return {'error': 'Failed to query document info.'};
 
     # -----------------------
+    # Internals
+    # -----------------------    # -----------------------
     # Internals
     # -----------------------
     @staticmethod

@@ -26,6 +26,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument('--persist_dir', default = _env('RAG_PERSIST_DIR', ''), help = 'Directory to persist/load the index.')
     p.add_argument('--reset_index', action = 'store_true', help = 'Force rebuild the index even if persist_dir exists.')
 
+    # Vector store configuration
+    p.add_argument('--vector_store', default = _env('RAG_VECTOR_STORE', 'chroma'), 
+                   choices = ['chroma', 'simple'], 
+                   help = 'Vector store backend to use (default: chroma).')
+    p.add_argument('--chroma_collection', default = _env('RAG_CHROMA_COLLECTION', 'pdf_rag_collection'),
+                   help = 'Chroma collection name for storing vectors.')
+
+    # Hardware configuration
+    p.add_argument('--device', default = _env('RAG_DEVICE', 'auto'),
+                   help = 'Device for model execution (auto, cuda, cpu, cuda:0, etc.)')
+
     # Model + embedding
     p.add_argument('--model', default = _env('RAG_LLM_MODEL', 'Qwen/Qwen2.5-1.5B-Instruct'), help = 'HF model name for LLM.')
     p.add_argument('--embed_model', default = _env('RAG_EMBED_MODEL', 'sentence-transformers/all-mpnet-base-v2'),
@@ -67,6 +78,9 @@ def build_config_from_args(args: argparse.Namespace) -> RAGConfig:
         max_new_tokens   = args.max_new_tokens,
         persist_dir      = args.persist_dir if args.persist_dir else '',
         reset_index      = args.reset_index,
+        vector_store_type = args.vector_store,
+        chroma_collection_name = args.chroma_collection,
+        device           = args.device,
         show_sources     = args.show_sources,
         verbose          = args.verbose
     )

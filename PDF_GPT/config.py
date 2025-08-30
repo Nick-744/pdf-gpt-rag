@@ -34,6 +34,13 @@ class RAGConfig:
     persist_dir: Optional[str] = field(default_factory = lambda: _env('RAG_PERSIST_DIR', '')) # empty -> no persistence
     reset_index: bool          = False  # force rebuild even if persist_dir exists
 
+    # Vector store configuration
+    vector_store_type:      str = field(default_factory = lambda: _env('RAG_VECTOR_STORE', 'chroma'))  # 'chroma', 'simple', 'pinecone', 'weaviate'
+    chroma_collection_name: str = field(default_factory = lambda: _env('RAG_CHROMA_COLLECTION', 'pdf_rag_collection'))
+
+    # Hardware configuration
+    device: Optional[str] = field(default_factory = lambda: _env('RAG_DEVICE', 'auto'))  # 'auto', 'cuda', 'cpu', 'cuda:0', etc.
+
     # Behavior flags
     show_sources: bool = False
     verbose:      bool = False # controls LlamaIndex internal verbosity

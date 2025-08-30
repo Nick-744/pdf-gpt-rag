@@ -28,8 +28,15 @@ try:
     # Embeddings + LLMs
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.huggingface import HuggingFaceLLM
+    # Vector stores
+    from llama_index.vector_stores.chroma import ChromaVectorStore
 except Exception:
     _MISSING.append('llama-index (+ subpackages)')
+
+try:
+    import chromadb
+except Exception:
+    _MISSING.append('chromadb')
 
 try:
     from huggingface_hub import login as hf_login # noqa: F401
@@ -45,6 +52,7 @@ if _MISSING:
         'Example:\n'
         '  pip install transformers torch llama-index '
         'llama-index-llms-huggingface llama-index-embeddings-huggingface '
+        'llama-index-vector-stores-chroma chromadb '
         'sentence-transformers huggingface_hub'
     )
 
@@ -59,5 +67,7 @@ __all__ = [
     'load_index_from_storage',
     'HuggingFaceEmbedding',
     'HuggingFaceLLM',
+    'ChromaVectorStore',
+    'chromadb',
     'hf_login'
 ]

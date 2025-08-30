@@ -5,5 +5,4 @@ To make it state-of-the-art:
 - Advanced chunking:    Semantic chunking, recursive splitting
 - Query processing:     Query expansion, intent detection
 - Evaluation suite:     RAGAS metrics, retrieval accuracy
-- Vector DB support:    Chroma, Weaviate, Pinecone integration
 - Multi-modal:          Handle images/tables in PDFs
