@@ -182,3 +182,4 @@ cython_debug/
 
 # My
 chroma_db/
+CHROMA_DB/

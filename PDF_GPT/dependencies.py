@@ -23,7 +23,6 @@ try:
         SimpleDirectoryReader,
         Settings,
         StorageContext,
-        load_index_from_storage,
     )
     # Embeddings + LLMs
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
@@ -64,7 +63,6 @@ __all__ = [
     'SimpleDirectoryReader', 
     'Settings',
     'StorageContext',
-    'load_index_from_storage',
     'HuggingFaceEmbedding',
     'HuggingFaceLLM',
     'ChromaVectorStore',

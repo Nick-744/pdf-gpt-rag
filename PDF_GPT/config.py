@@ -1,46 +1,43 @@
 '''
-Configuration module for PDF RAG Chatbot System
+Configuration for PDF RAG Chatbot System
 -------------------------------------------------
-Contains the RAGConfig dataclass and environment variable helpers.
+Simple configuration with sensible defaults.
 '''
 
 import os
 from typing import Optional
-from dataclasses import dataclass, field
-
-def _env(key: str, default: str) -> str:
-    '''Helper function to get environment variables with defaults.'''
-    return os.environ.get(key, default);
+from dataclasses import dataclass
 
 @dataclass
 class RAGConfig:
-    '''Configuration class for the RAG system with environment variable defaults.'''
+    '''Simple configuration for the RAG chatbot.'''
     
-    # Models
-    model_name:       str           = field(default_factory = lambda: _env('RAG_LLM_MODEL',   'Qwen/Qwen2.5-1.5B-Instruct'             ))
-    embed_model_name: str           = field(default_factory = lambda: _env('RAG_EMBED_MODEL', 'sentence-transformers/all-mpnet-base-v2'))
-    hf_token:         Optional[str] = field(default_factory = lambda: os.environ.get('HUGGINGFACE_TOKEN'))
+    # Models - can be overridden via environment variables
+    model_name:       str           = os.environ.get(
+        'RAG_LLM_MODEL', 'Qwen/Qwen2.5-1.5B-Instruct'
+    )
+    embed_model_name: str           = os.environ.get(
+        'RAG_EMBED_MODEL', 'sentence-transformers/all-mpnet-base-v2'
+    )
+    hf_token:         Optional[str] = os.environ.get('HUGGINGFACE_TOKEN')
 
-    # Chunking + Retrieval
-    chunk_size:    int = field(default_factory = lambda: int(_env('RAG_CHUNK_SIZE',    '1024')))
-    chunk_overlap: int = field(default_factory = lambda: int(_env('RAG_CHUNK_OVERLAP', '200' )))
-    top_k:         int = field(default_factory = lambda: int(_env('RAG_TOP_K',         '5'   )))
+    # Chunking and retrieval
+    chunk_size:    int = 1024
+    chunk_overlap: int = 200
+    top_k:         int = 5
 
     # Generation
-    temperature:    float = field(default_factory = lambda: float(_env('RAG_TEMPERATURE', '0.7')))
-    max_new_tokens: int   = field(default_factory = lambda: int(_env('RAG_MAX_NEW_TOKENS', '512')))
+    temperature:    float = 0.7
+    max_new_tokens: int   = 512
 
-    # Index persistence
-    persist_dir: Optional[str] = field(default_factory = lambda: _env('RAG_PERSIST_DIR', '')) # empty -> no persistence
-    reset_index: bool          = False  # force rebuild even if persist_dir exists
+    # Chroma settings
+    persist_dir:     str  = './CHROMA_DB'
+    collection_name: str  = 'pdf_rag_collection'
+    reset_index:     bool = False
 
-    # Vector store configuration
-    vector_store_type:      str = field(default_factory = lambda: _env('RAG_VECTOR_STORE', 'chroma'))  # 'chroma', 'simple', 'pinecone', 'weaviate'
-    chroma_collection_name: str = field(default_factory = lambda: _env('RAG_CHROMA_COLLECTION', 'pdf_rag_collection'))
+    # Hardware
+    device: str = 'auto' # 'auto', 'cuda', 'cpu'
 
-    # Hardware configuration
-    device: Optional[str] = field(default_factory = lambda: _env('RAG_DEVICE', 'auto'))  # 'auto', 'cuda', 'cpu', 'cuda:0', etc.
-
-    # Behavior flags
+    # Behavior
     show_sources: bool = False
-    verbose:      bool = False # controls LlamaIndex internal verbosity
+    verbose:      bool = False

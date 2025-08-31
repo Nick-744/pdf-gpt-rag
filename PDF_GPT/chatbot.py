@@ -14,7 +14,6 @@ from .dependencies import (
     SimpleDirectoryReader,
     Settings,
     StorageContext,
-    load_index_from_storage,
     HuggingFaceEmbedding,
     HuggingFaceLLM,
     ChromaVectorStore,
@@ -111,121 +110,75 @@ class PDFChatbot:
 
         return;
 
-    def _create_vector_store(self) -> Optional[Any]:
+    def _create_vector_store(self) -> ChromaVectorStore:
         '''
-        Create and configure the vector store based on the configuration.
-        Returns the vector store instance or None for default (simple) storage.
+        Create and configure the Chroma vector store.
+        Returns the ChromaVectorStore instance.
         '''
-        if self.config.vector_store_type == 'chroma':
-            try:
-                # Disable ChromaDB telemetry to prevent network errors
-                os.environ['ANONYMIZED_TELEMETRY'] = 'False'
-                
-                # Set up Chroma persistence directory
-                chroma_dir = os.path.join(self.config.persist_dir, 'chroma_db') if self.config.persist_dir else './chroma_db'
-                os.makedirs(chroma_dir, exist_ok=True)
-                
-                # Create Chroma client
-                chroma_client = chromadb.PersistentClient(path=chroma_dir)
-                
-                # Create or get collection
-                collection_name = self.config.chroma_collection_name
-                try:
-                    # Try to get existing collection
-                    chroma_collection = chroma_client.get_collection(name=collection_name)
-                    if self.config.reset_index:
-                        # Delete and recreate if reset is requested
-                        chroma_client.delete_collection(name=collection_name)
-                        chroma_collection = chroma_client.create_collection(name=collection_name)
-                        LOG.info('Reset Chroma collection: %s', collection_name)
-                    else:
-                        LOG.info('Using existing Chroma collection: %s', collection_name)
-                except Exception:
-                    # Collection doesn't exist, create it
-                    chroma_collection = chroma_client.create_collection(name=collection_name)
-                    LOG.info('Created new Chroma collection: %s', collection_name)
-                
-                # Create ChromaVectorStore
-                vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-                LOG.info('Chroma vector store initialized at: %s', chroma_dir)
-                return vector_store
-                
-            except Exception as e:
-                LOG.warning('Failed to initialize Chroma vector store: %s. Falling back to simple storage.', e)
-                return None
+        # Disable ChromaDB telemetry to prevent network errors
+        os.environ['ANONYMIZED_TELEMETRY'] = 'False'
         
-        elif self.config.vector_store_type == 'simple':
-            LOG.info('Using simple (in-memory) vector storage')
-            return None
+        # Set up Chroma persistence directory
+        chroma_dir = self.config.persist_dir
+        os.makedirs(chroma_dir, exist_ok=True)
         
-        else:
-            LOG.warning('Unsupported vector store type: %s. Using simple storage.', self.config.vector_store_type)
-            return None
+        # Create Chroma client
+        chroma_client = chromadb.PersistentClient(path=chroma_dir)
+        
+        # Create or get collection
+        collection_name = self.config.collection_name
+        try:
+            # Try to get existing collection
+            chroma_collection = chroma_client.get_collection(name=collection_name)
+            if self.config.reset_index:
+                # Delete and recreate if reset is requested
+                chroma_client.delete_collection(name=collection_name)
+                chroma_collection = chroma_client.create_collection(name=collection_name)
+                LOG.info('Reset Chroma collection: %s', collection_name)
+            else:
+                LOG.info('Using existing Chroma collection: %s', collection_name)
+        except Exception:
+            # Collection doesn't exist, create it
+            chroma_collection = chroma_client.create_collection(name=collection_name)
+            LOG.info('Created new Chroma collection: %s', collection_name)
+        
+        # Create ChromaVectorStore
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        LOG.info('Chroma vector store initialized at: %s', chroma_dir)
+        return vector_store
 
     def _load_or_build_index(self) -> VectorStoreIndex:
         '''
-        If persist_dir exists and reset_index=False, load the index; otherwise build and persist (if requested).
-        Uses the configured vector store backend.
+        Load existing index from Chroma or build a new one.
+        Uses only Chroma vector store backend.
         '''
-        persist_dir = self.config.persist_dir
         vector_store = self._create_vector_store()
 
-        # For Chroma, we handle persistence through the vector store itself
-        if self.config.vector_store_type == 'chroma' and vector_store is not None:
-            if not self.config.reset_index:
-                try:
-                    # Try to create index from existing Chroma collection
-                    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-                    # Check if the collection has any data
-                    collection = getattr(vector_store, 'chroma_collection', None)
-                    if collection is not None and collection.count() > 0:
-                        index = VectorStoreIndex(nodes=[], storage_context=storage_context)
-                        LOG.info('Loaded existing Chroma index with %d vectors', collection.count())
-                        return index
-                    else:
-                        LOG.info('Chroma collection is empty, building new index...')
-                except Exception as e:
-                    LOG.warning('Failed to load from Chroma: %s. Building new index...', e)
-
-            # Build new index with Chroma
-            LOG.info('Building new index with Chroma vector store...')
-            documents = SimpleDirectoryReader(input_files = self.pdf_paths).load_data()
-            LOG.info('Loaded %d documents/chunks.', len(documents))
-            
-            storage_context = StorageContext.from_defaults(vector_store=vector_store)
-            index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
-            LOG.info('Index built and persisted in Chroma')
-            return index
-
-        # Original logic for simple storage with file persistence
-        if persist_dir and os.path.isdir(persist_dir) and not self.config.reset_index:
+        # Try to load existing index from Chroma
+        if not self.config.reset_index:
             try:
-                LOG.info('Loading index from: %s', persist_dir)
-                storage_ctx = StorageContext.from_defaults(persist_dir = persist_dir)
-
-                return load_index_from_storage(storage_ctx);
+                # Try to create index from existing Chroma collection
+                storage_context = StorageContext.from_defaults(vector_store=vector_store)
+                # Check if the collection has any data
+                collection = getattr(vector_store, 'chroma_collection', None)
+                if collection is not None and collection.count() > 0:
+                    index = VectorStoreIndex(nodes=[], storage_context=storage_context)
+                    LOG.info('Loaded existing Chroma index with %d vectors', collection.count())
+                    return index
+                else:
+                    LOG.info('Chroma collection is empty, building new index...')
             except Exception as e:
-                LOG.warning('Failed to load index from %s: %s. Rebuilding…', persist_dir, e)
+                LOG.warning('Failed to load from Chroma: %s. Building new index...', e)
 
-        # Build new index with simple storage
-        LOG.info('Building new index from PDFs...')
+        # Build new index with Chroma
+        LOG.info('Building new index with Chroma vector store...')
         documents = SimpleDirectoryReader(input_files = self.pdf_paths).load_data()
         LOG.info('Loaded %d documents/chunks.', len(documents))
-
-        if vector_store is not None:
-            storage_context = StorageContext.from_defaults(vector_store=vector_store)
-            index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
-        else:
-            index = VectorStoreIndex.from_documents(documents)
-
-        if persist_dir and self.config.vector_store_type == 'simple':
-            try:
-                index.storage_context.persist(persist_dir = persist_dir)
-                LOG.info('Index persisted to: %s', persist_dir)
-            except Exception as e:
-                LOG.warning('Failed to persist index to %s: %s', persist_dir, e)
-
-        return index;
+        
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+        LOG.info('Index built and persisted in Chroma')
+        return index
 
     def _configure_llamaindex_settings(self) -> None:
         '''
@@ -303,7 +256,10 @@ class PDFChatbot:
             self.index       = self._load_or_build_index()
             self.chat_engine = self.index.as_chat_engine(
                 similarity_top_k = self.config.top_k,
-                verbose          = self.config.verbose,
+
+                verbose          = self.config.verbose
+                # verbose -> True: "condensed question" is LlamaIndex's smart
+                # preprocessing of your input to improve the RAG performance!
             )
             self.is_initialized = True
             LOG.info('Chatbot initialized successfully.')
@@ -358,25 +314,17 @@ class PDFChatbot:
         if not self.is_initialized or not self.index:
             return {'error': 'Index not loaded'};
         try:
-            # Get node count based on vector store type
+            # Get node count from Chroma collection
             num_nodes = None
             try:
-                if self.config.vector_store_type == 'chroma':
-                    # For Chroma, get count from collection
-                    storage_context = getattr(self.index, 'storage_context', None)
-                    if storage_context:
-                        vector_store = getattr(storage_context, 'vector_store', None)
-                        if vector_store:
-                            collection = getattr(vector_store, 'chroma_collection', None)
-                            if collection:
-                                num_nodes = collection.count()
-                else:
-                    # For simple storage, try to get from docstore
-                    ds = getattr(self.index, 'docstore', None)
-                    if ds is not None:
-                        docs = getattr(ds, 'docs', None)
-                        if isinstance(docs, dict):
-                            num_nodes = len(docs)
+                # For Chroma, get count from collection
+                storage_context = getattr(self.index, 'storage_context', None)
+                if storage_context:
+                    vector_store = getattr(storage_context, 'vector_store', None)
+                    if vector_store:
+                        collection = getattr(vector_store, 'chroma_collection', None)
+                        if collection:
+                            num_nodes = collection.count()
             except Exception as e:
                 LOG.debug('Could not determine node count: %s', e)
                 num_nodes = None
@@ -385,11 +333,11 @@ class PDFChatbot:
                 'num_nodes':     num_nodes,
                 'model_name':    self.config.model_name,
                 'embed_model':   self.config.embed_model_name,
-                'vector_store':  self.config.vector_store_type,
+                'vector_store':  'chroma',
                 'top_k':         self.config.top_k,
                 'chunk_size':    self.config.chunk_size,
                 'chunk_overlap': self.config.chunk_overlap,
-                'persist_dir':   self.config.persist_dir or '',
+                'persist_dir':   self.config.persist_dir,
             };
         except Exception as e:
             LOG.warning('Failed to extract document info: %s', e)
