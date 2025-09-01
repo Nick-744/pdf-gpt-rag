@@ -1,48 +1,28 @@
 '''
-Core chatbot module for PDF RAG Chatbot System
--------------------------------------------------
-Contains the main PDFChatbot class that orchestrates the RAG pipeline.
+Core chatbot module
+-----------------------------------
+Contains the main PDFChatbot class
+that orchestrates the RAG pipeline.
 '''
 
 import os
-import logging
 from typing import List, Optional, Dict, Any
 
 from .config import RAGConfig
 from .dependencies import (
-    VectorStoreIndex,
     SimpleDirectoryReader,
-    Settings,
+    VectorStoreIndex,
     StorageContext,
+    Settings,
+
     HuggingFaceEmbedding,
     HuggingFaceLLM,
+
     ChromaVectorStore,
     chromadb,
+
     hf_login
 )
-
-# ---------------------------
-# Logging setup
-# ---------------------------
-LOG = logging.getLogger('pdf_rag_chatbot')
-
-def configure_logging(verbosity: int) -> None:
-    '''
-    Configure logging level:
-        0   -> WARNING
-        1   -> INFO
-        >=2 -> DEBUG
-    '''
-    level = logging.WARNING
-    if verbosity   == 1:
-        level = logging.INFO
-    elif verbosity >= 2:
-        level = logging.DEBUG
-    logging.basicConfig(
-        level   = level,
-        format  = '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
-        datefmt = '%H:%M:%S',
-    )
 
 def _safe_int(x: str) -> int:
     '''Helper function to safely convert strings to integers for sorting.'''
@@ -65,9 +45,6 @@ class PDFChatbot:
     '''
 
     def __init__(self, pdf_paths: List[str], config: RAGConfig):
-        if not pdf_paths:
-            raise ValueError('At least one PDF path must be provided.');
-
         self.pdf_paths = pdf_paths
         self.config    = config
 
@@ -79,34 +56,17 @@ class PDFChatbot:
 
         return;
 
-    # -----------------------
     # Initialization helpers
-    # -----------------------
     def _login_hf_if_needed(self) -> None:
         '''Login to Hugging Face Hub if token is provided.'''
         if self.config.hf_token:
             try:
-                hf_login(token=self.config.hf_token)
-                LOG.info('Authenticated with Hugging Face Hub.')
+                hf_login(token = self.config.hf_token)
+                print('Authenticated with Hugging Face Hub.')
             except Exception as e:
-                LOG.warning('Failed to authenticate with Hugging Face Hub: %s', e)
+                print('Failed to authenticate with Hugging Face Hub: %s', e)
         else:
-            LOG.info('No HUGGINGFACE_TOKEN provided. If using gated/private models, set it via env or CLI.')
-
-        return;
-
-    def _validate_inputs(self) -> None:
-        '''Validate that all input PDF paths exist and are valid files.'''
-        for p in self.pdf_paths:
-            if not os.path.exists(p):
-                raise FileNotFoundError(f'Input file not found: {p}');
-            if not os.path.isfile(p):
-                raise ValueError(f'Expected a file but got a directory or special path: {p}');
-            if not p.lower().endswith('.pdf'):
-                LOG.warning('Non-PDF file provided (will still attempt to ingest): %s', p)
-
-        if self.config.persist_dir:
-            os.makedirs(self.config.persist_dir, exist_ok = True)
+            print('No HUGGINGFACE_TOKEN provided. If using gated/private models, set it via env or CLI.')
 
         return;
 
@@ -134,18 +94,19 @@ class PDFChatbot:
                 # Delete and recreate if reset is requested
                 chroma_client.delete_collection(name=collection_name)
                 chroma_collection = chroma_client.create_collection(name=collection_name)
-                LOG.info('Reset Chroma collection: %s', collection_name)
+                print('Reset Chroma collection: %s', collection_name)
             else:
-                LOG.info('Using existing Chroma collection: %s', collection_name)
+                print('Using existing Chroma collection: %s', collection_name)
         except Exception:
             # Collection doesn't exist, create it
             chroma_collection = chroma_client.create_collection(name=collection_name)
-            LOG.info('Created new Chroma collection: %s', collection_name)
-        
+            print('Created new Chroma collection: %s', collection_name)
+
         # Create ChromaVectorStore
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-        LOG.info('Chroma vector store initialized at: %s', chroma_dir)
-        return vector_store
+        print('Chroma vector store initialized at: %s', chroma_dir)
+
+        return vector_store;
 
     def _load_or_build_index(self) -> VectorStoreIndex:
         '''
@@ -163,32 +124,33 @@ class PDFChatbot:
                 collection = getattr(vector_store, 'chroma_collection', None)
                 if collection is not None and collection.count() > 0:
                     index = VectorStoreIndex(nodes=[], storage_context=storage_context)
-                    LOG.info('Loaded existing Chroma index with %d vectors', collection.count())
-                    return index
+                    print('Loaded existing Chroma index with %d vectors', collection.count())
+                    return index;
                 else:
-                    LOG.info('Chroma collection is empty, building new index...')
+                    print('Chroma collection is empty, building new index...')
             except Exception as e:
-                LOG.warning('Failed to load from Chroma: %s. Building new index...', e)
+                print('Failed to load from Chroma: %s. Building new index...', e)
 
         # Build new index with Chroma
-        LOG.info('Building new index with Chroma vector store...')
+        print('Building new index with Chroma vector store...')
         documents = SimpleDirectoryReader(input_files = self.pdf_paths).load_data()
-        LOG.info('Loaded %d documents/chunks.', len(documents))
+        print('Loaded %d documents/chunks.', len(documents))
         
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
-        LOG.info('Index built and persisted in Chroma')
-        return index
+        print('Index built and persisted in Chroma')
+
+        return index;
 
     def _configure_llamaindex_settings(self) -> None:
         '''
         Configure global LlamaIndex Settings for embeddings, LLM, and chunking.
         '''
-        LOG.debug('Configuring LlamaIndex settings...')
+        print('Configuring LlamaIndex settings...')
         
         # Determine device
         device = self._get_device()
-        LOG.info('Using device: %s', device)
+        print('Using device: %s', device)
         
         # Configure embedding model with device
         embed_kwargs = {}
@@ -229,18 +191,18 @@ class PDFChatbot:
         if self.config.device == 'auto':
             if torch.cuda.is_available():
                 device = 'cuda'
-                LOG.info('CUDA detected: %d GPU(s) available', torch.cuda.device_count())
+                print('CUDA detected: %d GPU(s) available', torch.cuda.device_count())
                 for i in range(torch.cuda.device_count()):
                     gpu_name = torch.cuda.get_device_name(i)
                     gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1024**3
-                    LOG.info('GPU %d: %s (%.1f GB)', i, gpu_name, gpu_memory)
+                    print('GPU %d: %s (%.1f GB)', i, gpu_name, gpu_memory)
             else:
                 device = 'cpu'
-                LOG.info('CUDA not available, using CPU')
+                print('CUDA not available, using CPU')
         else:
             device = self.config.device
             if device.startswith('cuda') and not torch.cuda.is_available():
-                LOG.warning('CUDA device requested but not available, falling back to CPU')
+                print('CUDA device requested but not available, falling back to CPU')
                 device = 'cpu'
                 
         return device;
@@ -248,7 +210,6 @@ class PDFChatbot:
     def _initialize(self) -> None:
         '''Initialize the chatbot by setting up all components.'''
         try:
-            self._validate_inputs()
             self._login_hf_if_needed()
             self._configure_llamaindex_settings()
 
@@ -262,9 +223,9 @@ class PDFChatbot:
                 # preprocessing of your input to improve the RAG performance!
             )
             self.is_initialized = True
-            LOG.info('Chatbot initialized successfully.')
+            print('Chatbot initialized successfully.')
         except Exception as e:
-            LOG.exception('Initialization failed: %s', e)
+            print('Initialization failed: %s', e)
             self.is_initialized = False
 
         return;
@@ -294,7 +255,7 @@ class PDFChatbot:
             
             return text;
         except Exception as e:
-            LOG.exception('Error during chat: %s', e)
+            print('Error during chat: %s', e)
 
             return 'I encountered an error while processing your question.';
 
@@ -303,9 +264,9 @@ class PDFChatbot:
         if self.chat_engine:
             try:
                 self.chat_engine.reset()
-                LOG.info('Conversation history cleared.')
+                print('Conversation history cleared.')
             except Exception as e:
-                LOG.warning('Failed to reset conversation: %s', e)
+                print('Failed to reset conversation: %s', e)
 
         return;
 
@@ -326,7 +287,7 @@ class PDFChatbot:
                         if collection:
                             num_nodes = collection.count()
             except Exception as e:
-                LOG.debug('Could not determine node count: %s', e)
+                print('Could not determine node count: %s', e)
                 num_nodes = None
 
             return {
@@ -340,15 +301,11 @@ class PDFChatbot:
                 'persist_dir':   self.config.persist_dir,
             };
         except Exception as e:
-            LOG.warning('Failed to extract document info: %s', e)
+            print('Failed to extract document info: %s', e)
 
             return {'error': 'Failed to query document info.'};
 
-    # -----------------------
     # Internals
-    # -----------------------    # -----------------------
-    # Internals
-    # -----------------------
     @staticmethod
     def _extract_page_labels(response: Any) -> List[str]:
         '''

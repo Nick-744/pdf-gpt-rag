@@ -1,86 +1,73 @@
 '''
-PDF RAG Chatbot System - Main Entry Point
--------------------------------------------------
-A complete chatbot with Retrieval-Augmented Generation (RAG) for PDF documents,
-built on top of LlamaIndex and Hugging Face models.
+A complete chatbot with Retrieval-Augmented Generation (RAG)
+for PDF documents, built on top of LlamaIndex and Hugging Face models.
 '''
 
-import os
 import sys
-import logging
+import os
 
 # Disable ChromaDB telemetry before any imports
 os.environ['ANONYMIZED_TELEMETRY'] = 'False'
 
+from PDF_GPT.chatbot import PDFChatbot
 from PDF_GPT.config import RAGConfig
-from PDF_GPT.chatbot import PDFChatbot, configure_logging
 
-# ---------------------------
-# Logging setup
-# ---------------------------
-LOG = logging.getLogger('pdf_rag_chatbot')
+def _setup_pdf_path():
+    pdf_source_dir = os.path.join(os.path.dirname(__file__), 'PDF_SOURCE')
+    pdf_files      = [f for f in os.listdir(pdf_source_dir) if f.lower().endswith('.pdf')]
+
+    if not pdf_files:
+        print('No PDF files found in PDF_SOURCE directory!')
+        return None;
+
+    if len(pdf_files) > 1:
+        print(f'Multiple PDF files found: {pdf_files}. Using the first one: {pdf_files[0]}')
+
+    return os.path.join(pdf_source_dir, pdf_files[0]);
 
 def main():
-    configure_logging(1) # INFO level logging
-    
-    # Use default configuration and PDF path
-    pdf_path = r'C:\Users\nick1\Documents\GitHub\pdf-gpt-rag\PDF_SOURCE\Understanding_Climate_Change.pdf'
-    cfg      = RAGConfig()
-    
-    LOG.info('PDF RAG Chatbot — starting up')
-    LOG.info('Model: %s | Embeddings: %s', cfg.model_name, cfg.embed_model_name)
-    
-    # Initialize chatbot
-    try:
+    pdf_path = _setup_pdf_path()
+    if not pdf_path:
+        return 1;
+
+    cfg = RAGConfig()
+
+    print('Starting up...\n')
+    print(f'Model:      {cfg.model_name}'      )
+    print(f'Embeddings: {cfg.embed_model_name}')
+
+    try: # Initialize chatbot
         chatbot = PDFChatbot([pdf_path], cfg)
     except Exception as e:
-        LOG.exception('Failed to initialize the chatbot: %s', e)
-        print('Failed to initialize chatbot. See logs for details.')
+        print(f'Failed to initialize chatbot...\nError: {e}')
 
         return 1;
 
     if not chatbot.is_initialized:
-        print('Failed to initialize chatbot. Please check paths and dependencies.')
+        print('Failed to initialize chatbot...')
 
         return 1;
 
-    # Interactive mode
+    # Main Chat loop
     print('=' * 60)
-    print('PDF RAG Chatbot (Interactive)')
+    print('PDF RAG Chatbot')
     print('=' * 60)
-    info = chatbot.get_document_info()
-    if 'error' not in info:
-        print(f"Document loaded. Model: {info.get('model_name')} | Embeddings: {info.get('embed_model')}")
-        nn = info.get('num_nodes')
-        if nn is not None:
-            print(f'Indexed nodes: {nn}')
-    print("Type 'quit' to exit, 'reset' to clear conversation history.")
-    print('-' * 60)
+    print()
 
     try:
         while True:
-            user_in = input('\nYou: ').strip()
+            user_in = input('- You: ').strip()
             if not user_in:
                 continue;
-            if user_in.lower() in {'q', 'quit', 'exit'}:
-                print('Goodbye!')
 
-                break;
-            if user_in.lower() == 'reset':
-                chatbot.reset_conversation()
-                print('Conversation reset.')
-
-                continue;
-
-            print('Assistant: ', end = '', flush = True)
+            print('- Chat: ', end = '', flush = True)
             out = chatbot.chat(user_in)
             print(out)
 
     except KeyboardInterrupt:
         print('\n\nGoodbye!')
     except Exception as e:
-        LOG.exception('Fatal error in interactive loop: %s', e)
-        print('\nAn unexpected error occurred. Exiting.')
+        print('\nAn unexpected error occurred. Exiting...')
 
         return 1;
 
