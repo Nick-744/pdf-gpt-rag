@@ -8,6 +8,11 @@ Chat with your PDF documents using RAG (Retrieval-Augmented Generation) powered 
 pip install -r requirements.txt
 ```
 
+For CUDA 11.8:
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
 ## Usage
 
 Simply run the chatbot to start an interactive session:
