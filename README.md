@@ -1,4 +1,4 @@
-# Simple PDF RAG Chatbot
+# PDF RAG Chatbot
 
 Chat with your PDF documents using RAG (Retrieval-Augmented Generation) powered by LlamaIndex and Hugging Face models.
 
