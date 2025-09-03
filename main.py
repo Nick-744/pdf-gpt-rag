@@ -58,18 +58,22 @@ def main():
         while True:
             user_in = input('- You: ').strip()
             if not user_in:
-                continue;
+                break;
+            if user_in.lower() in ('exit', 'quit'):
+                break;
 
             print('- Chat: ', end = '', flush = True)
             out = chatbot.chat(user_in)
             print(out)
 
     except KeyboardInterrupt:
-        print('\n\nGoodbye!')
+        pass;
     except Exception as e:
-        print('\nAn unexpected error occurred. Exiting...')
+        print('An unexpected error occurred. Exiting...')
 
         return 1;
+
+    print('\n\nGoodbye!')
 
     return 0;
 
