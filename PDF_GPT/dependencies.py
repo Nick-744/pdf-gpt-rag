@@ -40,11 +40,6 @@ try:
 except Exception:
     _MISSING.append('chromadb')
 
-try:
-    from huggingface_hub import login as hf_login
-except Exception:
-    _MISSING.append('huggingface_hub')
-
 # Check for missing dependencies and raise error if any are missing
 if _MISSING:
     missing_list = ', '.join(_MISSING)
@@ -66,7 +61,5 @@ __all__ = [
     'HuggingFaceLLM',
     
     'ChromaVectorStore',
-    'chromadb',
-    
-    'hf_login'
+    'chromadb'
 ]

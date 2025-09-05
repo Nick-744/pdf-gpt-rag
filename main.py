@@ -1,18 +1,17 @@
 '''
-A complete chatbot with Retrieval-Augmented Generation (RAG)
-for PDF documents, built on top of LlamaIndex and Hugging Face models.
+A chatbot with Retrieval-Augmented Generation (RAG) for PDF document,
+built on top of LlamaIndex and Hugging Face models.
 '''
 
 import sys
 import os
 
-# Disable ChromaDB telemetry before any imports
-os.environ['ANONYMIZED_TELEMETRY'] = 'False'
-
 from PDF_GPT.chatbot import PDFChatbot
 from PDF_GPT.config import RAGConfig
 
 def _setup_pdf_path():
+    ''' Return the path to a PDF in the [PDF_SOURCE] directory. '''
+
     pdf_source_dir = os.path.join(os.path.dirname(__file__), 'PDF_SOURCE')
     pdf_files      = [f for f in os.listdir(pdf_source_dir) if f.lower().endswith('.pdf')]
 
