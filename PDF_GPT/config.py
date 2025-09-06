@@ -1,65 +1,63 @@
-''' Configuration '''
-
 from dataclasses import dataclass
-from typing import Optional
 
 @dataclass
 class RAGConfig:
-    ''' Configuration for the RAG. '''
-    
-    # Models
-    model_name:       str           = 'Qwen/Qwen2.5-1.5B-Instruct'
-    embed_model_name: str           = 'sentence-transformers/all-mpnet-base-v2'
-    hf_token:         Optional[str] = None # or 'your_huggingface_token'
+    # --- Models --- #
+    model_name:       str = 'Qwen/Qwen2.5-1.5B-Instruct'
+    # Hugging Face ID of the LLM used to answer questions.
 
-    # Chunking and retrieval
+    embed_model_name: str = 'sentence-transformers/all-mpnet-base-v2'
+    # Hugging Face ID of the sentence embedding model used to
+    # vectorize chunks for retrieval.
+
+
+
+    # --- Chunking and retrieval --- #
     chunk_size:    int = 1024
+    # Number of characters/tokens per document chunk fed into embeddings.
+
     chunk_overlap: int = 200
+    # Characters/tokens overlapped between consecutive chunks to preserve
+    # context continuity.
+
     top_k:         int = 5
+    # Number of most similar chunks (vectors) retrieved per query
+    # for context passed to the LLM.
 
-    # Generation
+
+
+    # --- Generation --- #
     temperature:    float = 0.1
+    # Sampling randomness for text generation - lower = more deterministic.
+
     max_new_tokens: int   = 512
+    # Maximum number of tokens the LLM may generate for an answer.
 
-    # Chroma settings
+    context_window: int   = 2048
+    # Maximum number of tokens the LLM can process in its context window.
+    # - Smaller context = faster processing, less memory
+    # - Larger context  = better understanding of long documents
+
+
+
+    # --- Chroma settings --- #
     persist_dir:     str  = './CHROMA_DB'
+    # Filesystem path where the Chroma vector database is stored
+    # (enables reuse across runs).
+
     collection_name: str  = 'pdf_rag_collection'
-    reset_index:     bool = True
+    # Name of the Chroma collection inside the persistence directory.
 
-    # Hardware
-    device: str = 'auto' # 'auto', 'cuda', 'cpu'
+    reset_index:     bool = False
+    # If True, deletes any existing Chroma collection and rebuilds
+    # from source PDF.
 
-    # Behavior
-    show_sources: bool = False
-    verbose:      bool = False
 
-'''
-model_name:       Hugging Face ID of the chat/generation LLM used to answer
-                  questions.
-embed_model_name: Hugging Face ID of the sentence embedding model used to
-                  vectorize chunks for retrieval.
-hf_token:         Optional Hugging Face access token (string or None) used
-                  to authenticate for gated/private models.
 
-chunk_size:    Number of characters (or tokens depending on splitter) per
-               document chunk fed into embeddings / index.
-chunk_overlap: Characters overlapped between consecutive chunks to preserve
-               context continuity.
-top_k:         Number of most similar chunks (vectors) retrieved per query
-               for context passed to the LLM.
+    # --- Behavior --- #
+    show_sources: bool = True
+    # If True, append page/source identifiers to generated answers.
 
-temperature:    Sampling randomness for text generation; lower = more deterministic.
-max_new_tokens: Maximum number of tokens the LLM may generate for an answer.
-
-persist_dir:     Filesystem path where the Chroma vector database is stored
-                 (enables reuse across runs).
-collection_name: Name of the Chroma collection inside the persistence directory.
-reset_index:     If True, deletes any existing Chroma collection and rebuilds
-                 from source PDFs.
-
-device: Execution target for models.
-
-show_sources: If True, append page/source identifiers to generated answers.
-verbose:      If True, enables more detailed logging / internal traces (propagated
-              to LlamaIndex chat engine).
-'''
+    verbose:      bool = True
+    # If True, enables more detailed logging / internal traces (propagated
+    # to LlamaIndex chat engine).

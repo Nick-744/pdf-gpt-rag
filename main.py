@@ -1,13 +1,7 @@
-'''
-A chatbot with Retrieval-Augmented Generation (RAG) for PDF document,
-built on top of LlamaIndex and Hugging Face models.
-'''
-
-import sys
-import os
-
 from PDF_GPT.chatbot import PDFChatbot
 from PDF_GPT.config import RAGConfig
+import sys
+import os
 
 def _setup_pdf_path():
     ''' Return the path to a PDF in the [PDF_SOURCE] directory. '''
@@ -20,7 +14,7 @@ def _setup_pdf_path():
         return None;
 
     if len(pdf_files) > 1:
-        print(f'Multiple PDF files found: {pdf_files}. Using the first one: {pdf_files[0]}')
+        print(f'Multiple PDF files found: {pdf_files}. Using the 1st one: {pdf_files[0]}')
 
     return os.path.join(pdf_source_dir, pdf_files[0]);
 
@@ -36,21 +30,19 @@ def main():
     print(f'Embeddings: {cfg.embed_model_name}')
 
     try: # Initialize chatbot
-        chatbot = PDFChatbot([pdf_path], cfg)
+        chatbot = PDFChatbot(pdf_path, cfg)
     except Exception as e:
         print(f'Failed to initialize chatbot...\nError: {e}')
-
         return 1;
 
     if not chatbot.is_initialized:
         print('Failed to initialize chatbot...')
-
         return 1;
 
     # Main Chat loop
-    print('=' * 60)
+    print('=' * 15)
     print('PDF RAG Chatbot')
-    print('=' * 60)
+    print('=' * 15)
     print()
 
     try:
@@ -69,7 +61,6 @@ def main():
         pass;
     except Exception as e:
         print('An unexpected error occurred. Exiting...')
-
         return 1;
 
     print('\n\nGoodbye!')

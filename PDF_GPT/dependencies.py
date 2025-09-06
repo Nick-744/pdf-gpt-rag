@@ -11,36 +11,41 @@ from typing import List
 _MISSING: List[str] = []
 
 try:
-    from transformers import (
-        AutoTokenizer, AutoModelForCausalLM, AutoModelForSeq2SeqLM
-    )
+    import torch
 except Exception:
-    _MISSING.append('transformers')
+    _MISSING.append('torch')
 
 try:
     # Core LlamaIndex
     from llama_index.core import (
-        SimpleDirectoryReader,
-        VectorStoreIndex,
-        StorageContext,
-        Settings
+        SimpleDirectoryReader, # Loads documents from a directory
+        VectorStoreIndex,      # Create a searchable knowledge base
+        StorageContext,        # Persist data across sessions (+ ChromaDB)
+        Settings               # Configuration settings
     )
+    # LlamaIndex is a comprehensive data framework designed
+    # to help build applications that can connect
+    # LLMs with specific data source!
 
-    # Embeddings + LLMs
+    # Embedding + LLM
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.huggingface import HuggingFaceLLM
 
-    # Vector stores
+    # Vector store
     from llama_index.vector_stores.chroma import ChromaVectorStore
+    # A LlamaIndex adapter that wraps the ChromaDB
+    # collection to work with LlamaIndex's ecosystem.
 except Exception:
     _MISSING.append('llama-index (+ subpackages)')
 
 try:
     import chromadb
+    # Used to create and manage the underlying
+    # ChromaDB client and collections.
 except Exception:
     _MISSING.append('chromadb')
 
-# Check for missing dependencies and raise error if any are missing
+# Check for missing dependencies and raise error if any are missing!
 if _MISSING:
     missing_list = ', '.join(_MISSING)
     msg          = (
@@ -50,8 +55,10 @@ if _MISSING:
 
     raise RuntimeError(msg);
 
-# Export all the imports for use in other modules
+# Export all the imports for use in other modules...
 __all__ = [
+    'torch',
+    
     'SimpleDirectoryReader',
     'VectorStoreIndex',
     'StorageContext',
