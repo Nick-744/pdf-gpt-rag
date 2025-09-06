@@ -1,12 +1,9 @@
-# PDF RAG Chatbot System Requirements
-# Pin loosely to avoid frequent API breaks
-
-transformers>=4.30.0
-torch>=2.0.0
-llama-index>=0.10.0
-llama-index-llms-huggingface>=0.1.0
-llama-index-embeddings-huggingface>=0.1.0
-llama-index-vector-stores-chroma>=0.1.0
-sentence-transformers>=2.2.0
-huggingface_hub>=0.20.0
-chromadb>=0.4.0
+transformers
+torch
+llama-index
+llama-index-llms-huggingface
+llama-index-embeddings-huggingface
+llama-index-vector-stores-chroma
+sentence-transformers
+huggingface_hub
+chromadb
