@@ -1,6 +1,3 @@
-TODO in chatbot.py:
-Fix the prints after you removed the LOG s***...
-
 To make it state-of-the-art:
 
 - Add hybrid retrieval: Combine dense + sparse search
