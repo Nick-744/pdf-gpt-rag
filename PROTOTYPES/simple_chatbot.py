@@ -41,17 +41,34 @@ class SimpleContextChatbot:
         if not user_input.strip():
             return 'Please ask a question about the context.';
 
-        prompt = f'''\
-Answer briefly using ONLY the context below.
+        # --- Hard filter in user queries --- #
+        query    = user_input.lower()
+        patterns = [
+            'what time', 'time is it', 'current time', 'time now',
+            'date today', "today's date", 'current date', 'day today',
+            'weather', 'temperature outside', 'your name', 'who are you',
+            'what is your name'
+        ]
+        if any(p in query for p in patterns):
+            return 'Not in context.';
 
-CONTEXT:
+        prompt = f'''You are a concise QA assistant.
+Use ONLY the information inside CONTEXT to answer the QUESTION.
+
+Rules:
+- Output ONLY the direct answer in 1-2 sentences (<=50 words total).
+- No preamble, no explanations, no reasoning steps, no citations, no source mentions, no document titles.
+- Do not say phrases like "according to" or "the context".
+- If the answer is not present in CONTEXT, output exactly: Not in context.
+- Do not fabricate.
+- If asked about current time, date, weather, your identity, or anything not explicitly in CONTEXT: Not in context.
+
+CONTEXT START
 {self.context}
+CONTEXT END
 
-QUESTION:
-{user_input}
-
-ANSWER:
-'''
+QUESTION: {user_input}
+ANSWER: '''
 
         text: str = ''
         try:
@@ -59,7 +76,7 @@ ANSWER:
             text     = getattr(response, 'text', str(response))
         except Exception as e:
             print(f'Error during chat: {e}')
-            text = 'I encountered an error while processing your question.'
+            text = 'I encountered an error while processing your question...'
         
         return text;
 
