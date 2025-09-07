@@ -108,7 +108,8 @@ class PDFChatbot:
         return;
 
     def chat(self, user_input: str) -> str:
-        ''' Ask a question and return the answer with optional sources. '''
+        ''' Ask a question and return the answer. '''
+
         if not self.is_initialized:
             return 'Sorry, the chatbot is not initialized.';
         if not user_input.strip():
@@ -126,6 +127,7 @@ class PDFChatbot:
 
     def reset_conversation(self):
         ''' Clear previous context that could interfere with new queries! '''
+        
         if self.chat_engine:
             try:
                 self.chat_engine.reset()

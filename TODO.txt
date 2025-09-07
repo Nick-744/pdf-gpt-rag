@@ -1,8 +1,0 @@
-To make it state-of-the-art:
-
-- Add hybrid retrieval: Combine dense + sparse search
-- Implement re-ranking: Use cross-encoders to improve relevance
-- Advanced chunking:    Semantic chunking, recursive splitting
-- Query processing:     Query expansion, intent detection
-- Evaluation suite:     RAGAS metrics, retrieval accuracy
-- Multi-modal:          Handle images/tables in PDFs
