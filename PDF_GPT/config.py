@@ -5,10 +5,14 @@ class RAGConfig:
     # --- Models --- #
     model_name:       str = 'Qwen/Qwen2.5-1.5B-Instruct'
     # Hugging Face ID of the LLM used to answer questions.
+    'Qwen/Qwen2.5-1.5B-Instruct'
+    'Qwen/Qwen2.5-3B-Instruct'
 
     embed_model_name: str = 'sentence-transformers/all-mpnet-base-v2'
     # Hugging Face ID of the sentence embedding model used to
     # vectorize chunks for retrieval.
+    'sentence-transformers/all-mpnet-base-v2'
+    'BAAI/bge-large-en-v1.5'
 
 
 
@@ -49,8 +53,9 @@ class RAGConfig:
     # Name of the Chroma collection inside the persistence directory.
 
     reset_index:     bool = False
-    # If True, deletes any existing Chroma collection and rebuilds
-    # from source PDF.
+    # IMPORTANT: Set to True after changing embed_model_name (dimension change)
+    # so the Chroma collection is rebuilt! Once rebuilt you can toggle back to
+    # False for faster startups...
 
 
 
