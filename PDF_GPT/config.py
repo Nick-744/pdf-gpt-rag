@@ -27,7 +27,7 @@ class RAGConfig:
 
 
     # --- Generation --- #
-    temperature:    float = 0.1
+    temperature:    float = 0.01
     # Sampling randomness for text generation - lower = more deterministic.
 
     max_new_tokens: int   = 512
@@ -55,9 +55,22 @@ class RAGConfig:
 
 
     # --- Behavior --- #
-    show_sources: bool = True
-    # If True, append page/source identifiers to generated answers.
+    custom_prompt: str  = '''
+You are a helpful assistant that answers questions based ONLY on the provided context from a PDF document.
 
-    verbose:      bool = True
+Instructions:
+- Answer questions directly and concisely based only on the provided context
+- Do not show your reasoning process or intermediate steps
+- Do not repeat or rephrase the user's question
+- If you cannot find relevant information in the context, say "I don't have enough information in the provided document to answer that question."
+- Provide specific details when available, including page references if mentioned in the context
+
+Context: {context_str}
+
+Question: {query_str}
+
+Answer:'''
+
+    verbose:       bool = False
     # If True, enables more detailed logging / internal traces (propagated
     # to LlamaIndex chat engine).

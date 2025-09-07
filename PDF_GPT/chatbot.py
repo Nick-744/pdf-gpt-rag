@@ -1,7 +1,10 @@
 from .dependencies import (
     torch,
-    SimpleDirectoryReader, VectorStoreIndex, StorageContext, Settings,
+
+    SimpleDirectoryReader, VectorStoreIndex, StorageContext, PromptTemplate, Settings,
+    
     HuggingFaceEmbedding, HuggingFaceLLM,
+    
     ChromaVectorStore, chromadb
 )
 from .config import RAGConfig
@@ -89,10 +92,18 @@ class PDFChatbot:
             )
 
         # --- Create chat engine --- #
-        self.chat_engine = self.index.as_chat_engine(
-            similarity_top_k = self.config.top_k,
-            verbose          = self.config.verbose
-        )
+        if self.config.custom_prompt.strip():
+            qa_prompt_template = PromptTemplate(self.config.custom_prompt)
+            self.chat_engine   = self.index.as_chat_engine(
+                text_qa_template = qa_prompt_template,
+                similarity_top_k = self.config.top_k,
+                verbose          = self.config.verbose
+            )
+        else:
+            self.chat_engine = self.index.as_chat_engine(
+                similarity_top_k = self.config.top_k,
+                verbose          = self.config.verbose
+            )
 
         return;
 

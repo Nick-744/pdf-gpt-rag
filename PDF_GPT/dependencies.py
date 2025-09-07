@@ -21,6 +21,7 @@ try:
         SimpleDirectoryReader, # Loads documents from a directory
         VectorStoreIndex,      # Create a searchable knowledge base
         StorageContext,        # Persist data across sessions (+ ChromaDB)
+        PromptTemplate,        # Template for how the LLM should respond!
         Settings               # Configuration settings
     )
     # LlamaIndex is a comprehensive data framework designed
@@ -62,6 +63,7 @@ __all__ = [
     'SimpleDirectoryReader',
     'VectorStoreIndex',
     'StorageContext',
+    'PromptTemplate',
     'Settings',
 
     'HuggingFaceEmbedding',
