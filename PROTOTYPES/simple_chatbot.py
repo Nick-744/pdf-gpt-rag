@@ -27,8 +27,15 @@ class SimpleContextChatbot:
             tokenizer_name  = model_name,
             device_map      = device,
             context_window  = 4096,
-            max_new_tokens  = 1024,
-            generate_kwargs = {'temperature': 0.01, 'do_sample': True}
+            max_new_tokens  = 120,
+            generate_kwargs = {
+                'temperature': 0.4,
+                'do_sample':   True, # Without do_sample, temperature and top_p would be ignored!
+                'top_p':       0.9,
+
+                'repetition_penalty':   1.18,
+                'no_repeat_ngram_size': 3
+            }
         )
 
         return;
@@ -56,7 +63,6 @@ class SimpleContextChatbot:
 Use ONLY the information inside CONTEXT to answer the QUESTION.
 
 Rules:
-- Output ONLY the direct answer in 1-2 sentences (<=50 words total).
 - No preamble, no explanations, no reasoning steps, no citations, no source mentions, no document titles.
 - Do not say phrases like "according to" or "the context".
 - If the answer is not present in CONTEXT, output exactly: Not in context.

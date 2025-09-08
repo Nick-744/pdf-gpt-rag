@@ -1,5 +1,6 @@
 from simple_chatbot import SimpleContextChatbot
 from context import return_context
+from time import perf_counter
 import streamlit as st
 
 # Run the Streamlit app with:
@@ -23,7 +24,7 @@ if not bot.is_initialized:
     st.stop()
 
 if 'history' not in st.session_state:
-    st.session_state.history = [] # list of (user, bot)
+    st.session_state.history = [] # List of (user, bot)
 
 with st.form('chat_form', clear_on_submit = True):
     user_input = st.text_input('Your question', placeholder = 'Ask something from context...')
@@ -31,13 +32,17 @@ with st.form('chat_form', clear_on_submit = True):
 
 if submitted and user_input.strip():
     with st.spinner('Thinking...'):
-        answer = bot.chat(user_input.strip())
-    st.session_state.history.append((user_input.strip(), answer))
+        start_time = perf_counter()
+
+        answer     = bot.chat(user_input.strip())
+
+        elapsed    = perf_counter() - start_time
+    st.session_state.history.append((user_input.strip(), answer, elapsed))
 
 # Display history
-for i, (u, a) in enumerate(reversed(st.session_state.history)):
+for i, (u, a, elapsed) in enumerate(reversed(st.session_state.history)):
     st.markdown(f'**You:** {u}')
-    st.markdown(f'**Bot:** {a}')
+    st.markdown(f'**Bot:** {a}\n\n_<answered in {elapsed:.2f}s>_')
     st.markdown('---')
 
 st.sidebar.header('Chatbot Info')
