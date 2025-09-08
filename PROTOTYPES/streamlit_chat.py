@@ -5,7 +5,7 @@ import streamlit as st
 # Run the Streamlit app with:
 # streamlit run streamlit_chat.py
 
-st.set_page_config(page_title = 'PDF Context Chat', page_icon = '💬')
+st.set_page_config(page_title = 'Context Chat', page_icon = '💬')
 
 @st.cache_resource(show_spinner = False)
 def load_bot():
