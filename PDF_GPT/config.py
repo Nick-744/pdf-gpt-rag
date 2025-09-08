@@ -17,24 +17,24 @@ class RAGConfig:
 
 
     # --- Chunking and retrieval --- #
-    chunk_size:    int = 1024
+    chunk_size:    int = 512
     # Number of characters/tokens per document chunk fed into embeddings.
 
-    chunk_overlap: int = 200
+    chunk_overlap: int = 50
     # Characters/tokens overlapped between consecutive chunks to preserve
     # context continuity.
 
-    top_k:         int = 5
+    top_k:         int = 3
     # Number of most similar chunks (vectors) retrieved per query
     # for context passed to the LLM.
 
 
 
     # --- Generation --- #
-    temperature:    float = 0.01
+    temperature:    float = 0.05
     # Sampling randomness for text generation - lower = more deterministic.
 
-    max_new_tokens: int   = 512
+    max_new_tokens: int   = 256
     # Maximum number of tokens the LLM may generate for an answer.
 
     context_window: int   = 2048
@@ -52,7 +52,7 @@ class RAGConfig:
     collection_name: str  = 'pdf_rag_collection'
     # Name of the Chroma collection inside the persistence directory.
 
-    reset_index:     bool = False
+    reset_index:     bool = True
     # IMPORTANT: Set to True after changing embed_model_name (dimension change)
     # so the Chroma collection is rebuilt! Once rebuilt you can toggle back to
     # False for faster startups...

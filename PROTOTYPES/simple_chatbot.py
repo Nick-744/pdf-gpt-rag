@@ -1,5 +1,8 @@
 from llama_index.llms.huggingface import HuggingFaceLLM
-from context import return_context
+try:
+    from .context import return_context
+except ImportError:
+    from context import return_context
 import torch
 
 class SimpleContextChatbot:

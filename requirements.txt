@@ -4,3 +4,4 @@ llama-index-llms-huggingface
 llama-index-embeddings-huggingface
 llama-index-vector-stores-chroma
 chromadb
+streamlit
