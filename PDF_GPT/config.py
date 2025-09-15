@@ -4,14 +4,14 @@ import os
 @dataclass
 class RAGConfig:
     # --- Models --- #
-    model_name:       str = 'microsoft/Phi-3-mini-4k-instruct'
+    model_name:       str = 'Qwen/Qwen2.5-1.5B-Instruct'
     # Hugging Face ID of the LLM used to answer questions.
     'microsoft/Phi-3-mini-4k-instruct'
     'microsoft/Phi-3-small-8k-instruct'
     'Qwen/Qwen2.5-1.5B-Instruct'
     'Qwen/Qwen2.5-3B-Instruct'
 
-    embed_model_name: str = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
+    embed_model_name: str = 'sentence-transformers/all-mpnet-base-v2'
     # Hugging Face ID of the sentence embedding model used to
     # vectorize chunks for retrieval.
     'intfloat/multilingual-e5-large'
