@@ -1,22 +1,29 @@
 from dataclasses import dataclass
+import os
 
 @dataclass
 class RAGConfig:
     # --- Models --- #
-    model_name:       str = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_name:       str = 'microsoft/Phi-3-mini-4k-instruct'
     # Hugging Face ID of the LLM used to answer questions.
+    'microsoft/Phi-3-mini-4k-instruct'
+    'microsoft/Phi-3-small-8k-instruct'
     'Qwen/Qwen2.5-1.5B-Instruct'
     'Qwen/Qwen2.5-3B-Instruct'
 
-    embed_model_name: str = 'sentence-transformers/all-mpnet-base-v2'
+    embed_model_name: str = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
     # Hugging Face ID of the sentence embedding model used to
     # vectorize chunks for retrieval.
+    'intfloat/multilingual-e5-large'
+    'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
+    'BAAI/bge-m3'
     'sentence-transformers/all-mpnet-base-v2'
     'BAAI/bge-large-en-v1.5'
     
     # --- Authentication --- #
-    hf_token:         str = None
+    hf_token:         str = os.getenv('HF_TOKEN')
     # HuggingFace access token for private models (*optional*)
+    # Set HF_TOKEN in your .env file...
 
 
 
