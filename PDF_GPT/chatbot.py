@@ -29,9 +29,20 @@ class PDFChatbot:
     def _initialize(self):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+        # --- Set up HuggingFace authentication if token provided --- #
+        if self.config.hf_token:
+            os.environ['HUGGINGFACE_HUB_TOKEN'] = self.config.hf_token
+            try:
+                from huggingface_hub import login
+                login(token = self.config.hf_token)
+                print('Successfully authenticated with HuggingFace!')
+            except Exception as e:
+                print(f'Warning: HuggingFace authentication failed: {e}')
+
         # --- Initialize embedding model --- #
-        embed_kwargs         = {'device': device}
-        Settings.embed_model = HuggingFaceEmbedding(
+        embed_kwargs           = {'device': device}
+        if self.config.hf_token: embed_kwargs['token'] = self.config.hf_token
+        Settings.embed_model   = HuggingFaceEmbedding(
             model_name = self.config.embed_model_name, **embed_kwargs
         )
 
@@ -47,6 +58,7 @@ class PDFChatbot:
                 'do_sample':   True
             }
         }
+        if self.config.hf_token: llm_kwargs['token'] = self.config.hf_token
         Settings.llm           = HuggingFaceLLM(**llm_kwargs)
         Settings.chunk_size    = self.config.chunk_size
         Settings.chunk_overlap = self.config.chunk_overlap

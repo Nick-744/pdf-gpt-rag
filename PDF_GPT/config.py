@@ -13,6 +13,10 @@ class RAGConfig:
     # vectorize chunks for retrieval.
     'sentence-transformers/all-mpnet-base-v2'
     'BAAI/bge-large-en-v1.5'
+    
+    # --- Authentication --- #
+    hf_token:         str = None
+    # HuggingFace access token for private models (*optional*)
 
 
 

@@ -11,7 +11,7 @@ from PROTOTYPES.simple_chatbot import SimpleContextChatbot
 from PROTOTYPES.context import return_context
 
 # Run the Streamlit app with:
-# streamlit run streamlit_chat.py
+# streamlit run streamlit_main.py
 
 st.set_page_config(page_title = 'My Chat', page_icon = '💬')
 
